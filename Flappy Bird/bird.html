@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>flappy bird</title>
+    <style>
+      * {
+        font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+        text-align: center;
+      }
+      #board {
+        background-image: url("./flappybirdbg.png");
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="board" width="360" height="640"></canvas>
+    <!-- Add Background Music  src="" -->
+    <audio id="bgMusic" loop>
+      <source src="ghadi.mp3" type="audio/mp3" />
+    </audio>
+  </body>
+  <script>
+    //board
+    const GameBoard = document.getElementById("board");
+    const BoardWidth = GameBoard.width;
+    const BoardHeight = GameBoard.height;
+    const ctx = GameBoard.getContext("2d");
+    let Pspeed = 900;
+    let score = 0;
+    // Get the background music element
+    const bgMusic = document.getElementById("bgMusic");
+    bgMusic.play(); // Start the music as soon as the game begins
+
+    //score
+    function ScoreUpdater() {
+      ctx.fillStyle = "red";
+      ctx.font = "45px sans-serif ";
+      ctx.fillText(score, 5, 45);
+    }
+
+    //bird
+    const BirdWidth = 34;
+    const BirdHeight = 24;
+    const BirdX = BoardWidth / 8;
+    const BirdY = BoardHeight / 2;
+    const BirdImg = Object.assign(new Image(), { src: "./flappybird.png" });
+    const Bird = {
+      x: BirdX,
+      y: BirdY,
+      width: BirdWidth,
+      height: BirdHeight,
+    };
+    //phyisics
+    let velocityX = -2;
+    let velocityY = 0;
+    let GravityY = 0.1;
+    let GameOver = false;
+
+    //pipes
+    const pipeArray = [];
+    const PipeWidth = 64;
+    const PipeHeight = 512;
+    const PipeX = BoardWidth;
+    const PipY = 0;
+    const TopPipedImg = Object.assign(new Image(), { src: "./toppipe.png" });
+    const BottomPipedImg = Object.assign(new Image(), {
+      src: "./bottompipe.png",
+    }); //
+    document.addEventListener("keydown", BirdMove);
+    // move the bird
+    function BirdMove(e) {
+      if (e.code == "Space" || e.code == "ArrowUp") {
+        velocityY = -4.5;
+        if (GameOver) {
+          Bird.y = BirdY;
+          velocityY = 0;
+          pipeArray.length = 0;
+          score = 0;
+          GameOver = false;
+          game();
+          bgMusic.play();
+        }
+      }
+    }
+    //clear bord
+    function ClearBoard() {
+      ctx.clearRect(0, 0, BoardWidth, BoardHeight);
+    }
+    //Bird Draw
+    function BirdDraw() {
+      velocityY += GravityY;
+      // Bird.y += velocityY;
+      Bird.y = Math.max(Bird.y + velocityY, 0);
+      ctx.drawImage(BirdImg, Bird.x, Bird.y, BirdWidth, BirdHeight);
+    }
+
+    function pipeMove() {
+      for (let i = 0; i < pipeArray.length; i++) {
+        let pipa = pipeArray[i];
+        pipa.x += velocityX;
+        ctx.drawImage(pipa.img, pipa.x, pipa.y, pipa.width, pipa.height);
+        //score updat
+        if (!pipa.passed && Bird.x > pipa.x + pipa.width) {
+          score += 0.5; //<=== because there are 2 pipes!!!!!
+          pipa.passed = true;
+        }
+        //check collisiton
+        if (DetectCollision(Bird, pipa)) {
+          GameOver = true;
+          bgMusic.pause(); // Pause the music when the game ends
+        }
+      }
+      //cleare used pipes
+      while (pipeArray.length > 0 && pipeArray[0].x < -PipeWidth) {
+        pipeArray.shift(); // remove fisrt elemnt from the array
+      }
+    }
+
+    //logic
+    function DetectCollision(a, b) {
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+      );
+    }
+
+    function PlacePipe() {
+      if (GameOver) {
+        return;
+      }
+      let randpipe = -PipeHeight / 4 - Math.random() * (PipeHeight / 2);
+      let gap = BoardHeight / 4;
+      let TopPipe = {
+        img: TopPipedImg,
+        x: PipeX,
+        y: randpipe,
+        width: PipeWidth,
+        height: PipeHeight,
+        passed: false,
+      };
+      pipeArray.push(TopPipe);
+
+      let BottomPipe = {
+        img: BottomPipedImg,
+        x: PipeX,
+        y: randpipe + PipeHeight + gap,
+        width: PipeWidth,
+        height: PipeHeight,
+        passed: false,
+      };
+      pipeArray.push(BottomPipe);
+    }
+    PlacePipe();
+
+    //!game function <== make sure its always in the bottom idiota
+    function game() {
+      if (GameOver) {
+        ctx.font = "30px sans-serif ";
+        ctx.fillStyle = "black";
+        ctx.fillText("Game Over", BoardWidth / 4, BoardHeight / 2);
+        return;
+      }
+      if (Bird.y > BoardHeight) {
+        GameOver = true;
+        bgMusic.pause(); // Pause the music if the bird falls
+        return; // Stop further updates
+      }
+      ClearBoard();
+      BirdDraw();
+      pipeMove();
+      ScoreUpdater();
+      requestAnimationFrame(game);
+    }
+    setInterval(PlacePipe, Pspeed);
+    bgMusic.play();
+    game();
+  </script>
+</html>
